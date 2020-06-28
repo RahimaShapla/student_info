@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
@@ -464,6 +465,10 @@ class _ProfileActivityState extends State<ProfileActivity> {
         ));
   }
 
+  popClass() {
+    Navigator.pop(context);
+  }
+
   getUpdateResponse() async {
     if (editProfileBloc != null) {
       editProfileBloc.editStream.listen((response) async {
@@ -473,7 +478,11 @@ class _ProfileActivityState extends State<ProfileActivity> {
               Utility.instance.innerLoader(context);
               break;
             case Status.COMPLETE:
-              Navigator.of(context).pop();
+              Timer(
+                Duration(seconds: 2),
+                popClass,
+              );
+
               if (response.data != null) {
                 if (response.data.isSuccess) {
                   Utility.instance.showSuccessToast(response.data.message);
@@ -482,7 +491,7 @@ class _ProfileActivityState extends State<ProfileActivity> {
                 }
               } else {
                 Utility.instance
-                    .showErrorToast("Could not log out. Please try again.");
+                    .showErrorToast("Could not update. Please try again.");
               }
 
               break;
