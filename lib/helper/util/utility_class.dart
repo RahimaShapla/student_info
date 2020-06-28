@@ -44,7 +44,7 @@ class Utility {
         fontSize: 16.0);
   }
 
-  void  innerLoader(BuildContext context) {
+  void innerLoader(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -109,22 +109,18 @@ class Utility {
                       fontFamily: "roboto_bold",
                       fontWeight: FontWeight.bold,
                       fontSize: 14)),
-              onPressed: () async{
+              onPressed: () async {
                 Navigator.of(context).pop();
-                await SharedPrefUtil.writeString(PreferenceKey.USER_EMAIL,
-                    "");
+                await SharedPrefUtil.writeString(PreferenceKey.USER_EMAIL, "");
                 await SharedPrefUtil.writeBoolean(
                     PreferenceKey.IS_LOGGED_IN, false);
                 await SharedPrefUtil.writeString(
-                    PreferenceKey.ACCESS_TOKEN,
-                    "");
+                    PreferenceKey.ACCESS_TOKEN, "");
                 await SharedPrefUtil.writeString(PreferenceKey.IMAGE_PATH, "");
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SignInActivity(),
-                  ),
-                );
+                Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => SignInActivity()),
+                    ModalRoute.withName("/Home"));
               },
             ),
           ],
@@ -132,5 +128,4 @@ class Utility {
       },
     );
   }
-
 }

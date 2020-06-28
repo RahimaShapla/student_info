@@ -222,7 +222,7 @@ class _SignInActivityState extends State<SignInActivity> {
                       await SharedPrefUtil.writeString(
                           PreferenceKey.ACCESS_TOKEN,
                         response.data.dataModel.accessToken);
-                      Navigator.of(context).push(MaterialPageRoute(
+                      Navigator.of(context).pushReplacement(MaterialPageRoute(
                           builder: (BuildContext context) =>
                               ProfileActivity()));
                   } else {
