@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "data": {
+    "id": 0,
+    "access_token": "Bearer dummy_token_value",
+    "name": "James Hetfield",
+    "email": "james.metallica@gmail.com",
+    "phone": "1111111111"
+  },
+  "message": "Log in successful"
+}
