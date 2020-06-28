@@ -479,7 +479,7 @@ class _ProfileActivityState extends State<ProfileActivity> {
               break;
             case Status.COMPLETE:
               Timer(
-                Duration(seconds: 2),
+                Duration(seconds: 1),
                 popClass,
               );
 
