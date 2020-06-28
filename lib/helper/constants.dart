@@ -19,6 +19,10 @@ class Constants {
   static const EMAIL = "email";
   static const PASSWORD = "password";
   static const PHONE = "phone";
+  static const FIRST_NAME = "first_name";
+  static const LAST_NAME = "last_name";
+  static const AUTHORIZATION = "Authorization";
+  static const PROFILE_PICTURE = "profile_image";
 }
 
 class EndUrls {
@@ -29,7 +33,8 @@ class EndUrls {
 
 class JsonString {
   static const ID = "id";
-  static const NAME = "name";
+  static const FIRST_NAME = "first_name";
+  static const LAST_NAME = "last_name";
   static const EMAIL = "email";
   static const PHONE = "phone";
   static const SUCCESS = "success";

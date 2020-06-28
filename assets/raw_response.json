@@ -3,9 +3,10 @@
   "data": {
     "id": 0,
     "access_token": "Bearer dummy_token_value",
-    "name": "James Hetfield",
+    "first_name": "James",
+    "last_name" : "Hetfield",
     "email": "james.metallica@gmail.com",
     "phone": "1111111111"
   },
-  "message": "Log in successful"
+  "message": "Request successful"
 }

@@ -28,7 +28,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
-    - assets/config.json
+    - assets/raw_response.json
   fonts:
     - family: Muli
       fonts:

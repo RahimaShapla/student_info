@@ -30,7 +30,8 @@ class RegisterResponse{
 
 class UserModel{
   int id;
-  String name;
+  String firstName;
+  String lastName;
   String email;
   String phone;
   String accessToken;
@@ -39,7 +40,8 @@ class UserModel{
 
   UserModel.fromJson(Map<String, dynamic> json) {
     id = json[JsonString.ID];
-    name = json[JsonString.NAME];
+    firstName = json[JsonString.FIRST_NAME];
+    lastName = json[JsonString.LAST_NAME];
     email = json[JsonString.EMAIL];
     phone = json[JsonString.PHONE];
     accessToken = json[JsonString.ACCESS_TOKEN];
@@ -48,7 +50,8 @@ class UserModel{
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
     data[JsonString.ID] = this.id;
-    data[JsonString.NAME] = this.name;
+    data[JsonString.FIRST_NAME] = this.firstName;
+    data[JsonString.LAST_NAME] = this.lastName;
     data[JsonString.EMAIL] = this.email;
     data[JsonString.PHONE] = this.phone;
     data[JsonString.ACCESS_TOKEN] = this.accessToken;

@@ -19,17 +19,17 @@ class GetProfileBloc{
   GetProfileBloc(Map<String, String> body) {
     _categoryController = StreamController<ApiResponse<RegisterResponse>>();
     repository = StudentRepository();
-    register(body);
+    getProfile(body);
   }
 
-  register(Map<String, String> body) async {
-    if(registerSink!=null) {
-      registerSink.add(ApiResponse.loading("Wait......"));
+  getProfile(Map<String, String> body) async {
+    if(profileSink!=null) {
+      profileSink.add(ApiResponse.loading("Wait......"));
       try {
-        RegisterResponse response = await repository.signIn(body);
-        registerSink.add(ApiResponse.completed(response));
+        RegisterResponse response = await repository.getProfile(body);
+        profileSink.add(ApiResponse.completed(response));
       } on Exception catch (e) {
-        registerSink.add(ApiResponse.error(e.toString()));
+        profileSink.add(ApiResponse.error(e.toString()));
       }
     }
   }

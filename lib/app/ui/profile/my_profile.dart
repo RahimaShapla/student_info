@@ -1,11 +1,17 @@
 import 'dart:io';
-
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:studentinfo/app/data/remote/register_response.dart';
 import 'package:studentinfo/app/ui/profile/edit_profile_bloc.dart';
+import 'package:studentinfo/app/ui/profile/get_profile_bloc.dart';
 import 'package:studentinfo/helper/constants.dart';
+import 'package:studentinfo/helper/network/api_response.dart';
+import 'package:studentinfo/helper/util/loader.dart';
+import 'package:studentinfo/helper/util/shared_preference.dart';
 import 'package:studentinfo/helper/util/utility_class.dart';
 
 class ProfileActivity extends StatefulWidget {
@@ -16,52 +22,107 @@ class ProfileActivity extends StatefulWidget {
 }
 
 class _ProfileActivityState extends State<ProfileActivity> {
-  // GetProfileBloc _getProfileBloc;
+  GetProfileBloc _getProfileBloc;
   bool isEditable = false;
   TextEditingController _firstNameController = TextEditingController();
   TextEditingController _lastNameController = TextEditingController();
   TextEditingController _emailController = TextEditingController();
   TextEditingController _phoneController = TextEditingController();
+  String _message = '';
+  var initializationSettings;
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging();
+
+  get onDidRecieveLocalNotification => null;
+
+  get flutterLocalNotificationsPlugin => null;
+  FlutterLocalNotificationsPlugin plugin;
 
   PickedFile profileFile;
+  String imagePath = "";
   final ImagePicker _picker = ImagePicker();
-  bool isForProfile = true;
-  bool notSync = false;
-  String email = "", phone = "";
-  List<String> currentEmailList = List<String>();
-  List<String> currentPhoneList = List<String>();
   EditProfileBloc editProfileBloc;
 
   @override
   void initState() {
+    getFromShared();
     _getProfileBloc = GetProfileBloc({});
+    var initializationSettingsAndroid =
+        new AndroidInitializationSettings('@mipmap/ic_launcher');
+    var initializationSettingsIOS = new IOSInitializationSettings(
+        onDidReceiveLocalNotification: onDidRecieveLocalNotification);
+
+    initializationSettings = new InitializationSettings(
+        initializationSettingsAndroid, initializationSettingsIOS);
+    plugin = new FlutterLocalNotificationsPlugin();
+    plugin.initialize(initializationSettings);
+
+    getMessage();
     super.initState();
   }
 
-  /* getFromShared() async {
-    position = await SharedPrefUtil.getInt(PreferenceKey.IMAGE_POSITION);
-    if (position != 0) {
-      setState(() {});
-    }
-  }*/
-
-  fromCamera() async {
-    profileFile = await _picker.getImage(source: ImageSource.camera);
-    setState(() {});
+  void getMessage() {
+    _firebaseMessaging.configure(
+        onMessage: (Map<String, dynamic> message) async {
+      print('on message $message');
+      setState(() => _message = message["notification"]["title"]);
+      displayNotification(message);
+    }, onResume: (Map<String, dynamic> message) async {
+      print('on resume $message');
+      setState(() => _message = message["notification"]["title"]);
+      displayNotification(message);
+    }, onLaunch: (Map<String, dynamic> message) async {
+      print('on launch $message');
+      setState(() => _message = message["notification"]["title"]);
+      displayNotification(message);
+    });
   }
 
-  fromGallery() async {
-    profileFile = await _picker.getImage(source: ImageSource.gallery);
+  Future displayNotification(Map<String, dynamic> message) async {
+    var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
+        'channelid', 'flutterfcm', 'your channel description',
+        importance: Importance.Max, priority: Priority.High);
+    var iOSPlatformChannelSpecifics = new IOSNotificationDetails();
+    var platformChannelSpecifics = new NotificationDetails(
+        androidPlatformChannelSpecifics, iOSPlatformChannelSpecifics);
+    await plugin.show(
+      0,
+      message['notification']['title'],
+      message['notification']['body'],
+      platformChannelSpecifics,
+      payload: 'hello',
+    );
+  }
+
+/*  Future<dynamic> onSelectNotification(String payload) async {
+    Navigator.push(
+      context,
+      new MaterialPageRoute(builder: (context) => ProfileActivity()),
+    );
+  }*/
+
+  getFromShared() async {
+    if (await SharedPrefUtil.getBoolean(PreferenceKey.IS_LOGGED_IN)) {
+      imagePath = await SharedPrefUtil.getString(PreferenceKey.IMAGE_PATH);
+      setState(() {});
+    }
+  }
+
+  fromCamera(bool isCamera) async {
+    if (isCamera)
+      profileFile = await _picker.getImage(source: ImageSource.camera);
+    else
+      profileFile = await _picker.getImage(source: ImageSource.gallery);
+    imagePath = profileFile.path;
+    await SharedPrefUtil.writeString(PreferenceKey.IMAGE_PATH, imagePath);
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: profileBuild(),
-      /* RefreshIndicator(
-        onRefresh: () => _getProfileBloc.getResponse({}),
-        child: StreamBuilder<ApiResponse<ProfileResponse>>(
+      body: RefreshIndicator(
+        onRefresh: () => _getProfileBloc.getProfile({}),
+        child: StreamBuilder<ApiResponse<RegisterResponse>>(
           stream: _getProfileBloc.profileStream,
           builder: (context, snapshot) {
             if (snapshot.hasData) {
@@ -72,56 +133,45 @@ class _ProfileActivityState extends State<ProfileActivity> {
                 case Status.COMPLETE:
                   if (snapshot.data == null) {
                     Utility.instance.showErrorToast("Something went wrong!");
-                    return noItemFound();
                   } else {
                     if (snapshot.data.data == null) {
                       Utility.instance.showErrorToast(snapshot.data.message);
-                      return noItemFound();
                     } else {
                       if (snapshot.data.data.isSuccess) {
                         if (snapshot.data.data.dataModel != null) {
-                          if (!notSync) {
-                            email = snapshot.data.data.dataModel.email;
-                            phone = snapshot.data.data.dataModel.phone;
-                            snapshot.data.data.dataModel.emailList
-                                .insert(0, snapshot.data.data.dataModel.email);
-                            snapshot.data.data.dataModel.phoneList
-                                .insert(0, snapshot.data.data.dataModel.phone);
-                            notSync = true;
-                          }
-                          return profileBuild(snapshot.data.data.dataModel);
+                          _firstNameController.text =
+                              snapshot.data.data.dataModel.firstName;
+                          _lastNameController.text =
+                              snapshot.data.data.dataModel.lastName;
+                          _emailController.text =
+                              snapshot.data.data.dataModel.email;
+                          _phoneController.text =
+                              snapshot.data.data.dataModel.phone;
                         } else {
                           Utility.instance
                               .showErrorToast(snapshot.data.data.message);
-                          return noItemFound();
                         }
                       }
                     }
                   }
+                  return profileBuild();
                   break;
                 case Status.ERROR:
                   return Error(
                     errorMessage: snapshot.data.message,
-                    onRetryPressed: () => _getProfileBloc.getResponse({}),
+                    onRetryPressed: () => _getProfileBloc.getProfile({}),
                   );
                   break;
               }
             }
-            return noItemFound();
+            return Container();
           },
         ),
-      ),*/
+      ),
     );
   }
 
-  getDateValue(String date) {
-    var now = new DateTime.now();
-    var formatter = new DateFormat('dd/MM/yyyy');
-    return formatter.format(now);
-  }
-
   Widget profileBuild() {
-    // _nameController.text = model.name;
     return Container(
         height: MediaQuery.of(context).size.height,
         width: MediaQuery.of(context).size.width,
@@ -146,7 +196,7 @@ class _ProfileActivityState extends State<ProfileActivity> {
                 primary: false,
                 children: <Widget>[
                   InkWell(
-                    onTap: (){
+                    onTap: () {
                       Utility.instance.showLogoutDialog(context);
                     },
                     child: Container(
@@ -175,10 +225,10 @@ class _ProfileActivityState extends State<ProfileActivity> {
                           child: CircleAvatar(
                             radius: 55,
                             backgroundColor: kOrange,
-                            backgroundImage: profileFile == null
+                            backgroundImage: imagePath == ""
                                 ? AssetImage("assets/images/avater.png")
-                                : FileImage(File(profileFile
-                                    .path)), //Image.file(File(profileFile.path)),
+                                : FileImage(File(
+                                    imagePath)), //Image.file(File(profileFile.path)),
                           ),
                         ),
                         Positioned.fill(
@@ -255,7 +305,7 @@ class _ProfileActivityState extends State<ProfileActivity> {
                           controller: _lastNameController,
                           textAlign: TextAlign.left,
                           style: TextStyle(
-                            color: kHintTextColor1,
+                            color: kTextColor1,
                             fontSize: 14.0,
                           ),
                           keyboardType: TextInputType.text,
@@ -299,8 +349,9 @@ class _ProfileActivityState extends State<ProfileActivity> {
                         child: TextFormField(
                           controller: _emailController,
                           textAlign: TextAlign.left,
+                          enabled: false,
                           style: TextStyle(
-                            color: kHintTextColor1,
+                            color: kTextColor1,
                             fontSize: 14.0,
                           ),
                           keyboardType: TextInputType.emailAddress,
@@ -342,9 +393,11 @@ class _ProfileActivityState extends State<ProfileActivity> {
                           vertical: 0.0,
                         ),
                         child: TextFormField(
+                          enabled: false,
+                          controller: _phoneController,
                           textAlign: TextAlign.left,
                           style: TextStyle(
-                            color: kHintTextColor1,
+                            color: kTextColor1,
                             fontSize: 14.0,
                           ),
                           keyboardType: TextInputType.text,
@@ -374,7 +427,13 @@ class _ProfileActivityState extends State<ProfileActivity> {
                     ),
                   ),
                   InkWell(
-                    onTap: () {},
+                    onTap: () {
+                      editProfileBloc = EditProfileBloc(
+                          _firstNameController.text.toString().trim(),
+                          _lastNameController.text.toString().trim(),
+                          imagePath);
+                      getUpdateResponse();
+                    },
                     child: Container(
                       width: 150,
                       margin: EdgeInsets.fromLTRB(100, 30, 100, 30),
@@ -405,22 +464,19 @@ class _ProfileActivityState extends State<ProfileActivity> {
         ));
   }
 
-/*  getUpdateResponse() async {
+  getUpdateResponse() async {
     if (editProfileBloc != null) {
       editProfileBloc.editStream.listen((response) async {
         if (response != null) {
           switch (response.status) {
             case Status.LOADING:
-              innerLoader();
+              Utility.instance.innerLoader(context);
               break;
             case Status.COMPLETE:
               Navigator.of(context).pop();
               if (response.data != null) {
-                Utility.instance.showSuccessToast(response.data.message);
                 if (response.data.isSuccess) {
-                  setState(() {
-                    isEditable = false;
-                  });
+                  Utility.instance.showSuccessToast(response.data.message);
                 } else {
                   Utility.instance.showErrorToast(response.data.message);
                 }
@@ -438,17 +494,6 @@ class _ProfileActivityState extends State<ProfileActivity> {
         }
       });
     }
-  }*/
-
-  Widget noItemFound() {
-    return Container(
-      alignment: Alignment.center,
-      child: Text(
-        "No item found.",
-        style: TextStyle(
-            color: kTextColor2, fontSize: 16, fontWeight: FontWeight.w500),
-      ),
-    );
   }
 
   pickImage() {
@@ -471,7 +516,7 @@ class _ProfileActivityState extends State<ProfileActivity> {
               children: <Widget>[
                 InkWell(
                   onTap: () {
-                    fromCamera();
+                    fromCamera(true);
                     Navigator.of(context).pop();
                   },
                   child: Text(
@@ -487,7 +532,7 @@ class _ProfileActivityState extends State<ProfileActivity> {
                 ),
                 InkWell(
                   onTap: () {
-                    fromGallery();
+                    fromCamera(false);
                     Navigator.of(context).pop();
                   },
                   child: Text(

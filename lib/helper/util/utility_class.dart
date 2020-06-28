@@ -118,6 +118,7 @@ class Utility {
                 await SharedPrefUtil.writeString(
                     PreferenceKey.ACCESS_TOKEN,
                     "");
+                await SharedPrefUtil.writeString(PreferenceKey.IMAGE_PATH, "");
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(

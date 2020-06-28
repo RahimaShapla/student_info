@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:studentinfo/helper/constants.dart';
 import 'package:studentinfo/helper/network/app_exception.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:studentinfo/helper/util/shared_preference.dart';
 
 class ApiBaseHelper {
   final String _baseUrl = "https://google.com/api/";
@@ -12,7 +14,7 @@ class ApiBaseHelper {
     var responseJson;
     try {
       final response = await http.get(_baseUrl + endUrl, headers: header);
-      //  responseJson = _returnResponse(response);
+      responseJson = _returnResponse(response);
     } on SocketException {
       throw FetchDataException('No Internet connection');
     }
@@ -23,7 +25,7 @@ class ApiBaseHelper {
     var responseJson;
     try {
       final response =
-      await http.post(_baseUrl + endUrl, body: body, headers: header);
+          await http.post(_baseUrl + endUrl, body: body, headers: header);
       responseJson = _returnResponse(response);
     } on SocketException {
       throw FetchDataException('No Internet connection');
@@ -31,31 +33,25 @@ class ApiBaseHelper {
     return responseJson;
   }
 
-  Future<dynamic> postMulti(String endUrl,
-      String accept,
-      String name,
-      PickedFile profileFilePath) async {
+  Future<dynamic> postMultipart(String endUrl, String firstName,
+      String lastName, String profileFilePath) async {
     var responseJson;
+    var rawStream;
     try {
       var request = http.MultipartRequest("POST", Uri.parse(_baseUrl + endUrl));
-/*      request.fields[Constants.NAME] = name;
+      request.fields[Constants.FIRST_NAME] = firstName;
+      request.fields[Constants.LAST_NAME] = lastName;
       request.headers[Constants.AUTHORIZATION] =
           await SharedPrefUtil.getString(PreferenceKey.ACCESS_TOKEN);
-      request.headers[Constants.ACCEPT] = accept;*/
-
-      /*     if (profileFilePath != null) {
+      if (profileFilePath.isNotEmpty) {
         var pic = await http.MultipartFile.fromPath(
-            Constants.DEFAULT_IMAGE, profileFilePath.path);
+            Constants.PROFILE_PICTURE, profileFilePath);
         request.files.add(pic);
       } else
-        request.fields[Constants.DEFAULT_IMAGE] = "";*/
-
-
-      var response = await request.send();
-
-      var responses = await http.Response.fromStream(response);
-
-      //   responseJson = _returnResponse(responses);
+        request.fields[Constants.PROFILE_PICTURE] = "";
+      /*   var response = await request.send();
+      rawStream = await http.Response.fromStream(response);*/
+      responseJson = _returnResponse(rawStream);
     } on SocketException {
       throw FetchDataException('No Internet connection');
     }
@@ -63,22 +59,28 @@ class ApiBaseHelper {
   }
 
   dynamic _returnResponse(http.Response response) async {
-    switch (response.statusCode) {
-      case 200:
-      case 400:
-      //  throw BadRequestException(response.body.toString());
-      case 401:
-      case 403:
-      case 404:
-      // throw UnauthorisedException(response.body.toString());
-      case 500:
-        var value = await rootBundle.loadString("assets/config.json");
-        final responseJson = jsonDecode(value);
-        return responseJson;
-    // default:
-    /*   throw FetchDataException('Error occured while Communication with '
+    if (response != null)
+      switch (response.statusCode) {
+        case 200:
+        case 400:
+        //  throw BadRequestException(response.body.toString());
+        case 401:
+        case 403:
+        // throw UnauthorisedException(response.body.toString());
+        case 404:
+        case 500:
+          var value = await rootBundle.loadString("assets/raw_response.json");
+          final responseJson = jsonDecode(value);
+          return responseJson;
+        // default:
+        /*   throw FetchDataException('Error occured while Communication with '
             'Server with StatusCode : ${response.statusCode}');*/
-    // }
+        // }
+      }
+    else {
+      var value = await rootBundle.loadString("assets/raw_response.json");
+      final responseJson = jsonDecode(value);
+      return responseJson;
     }
   }
 }
